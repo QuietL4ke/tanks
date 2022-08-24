@@ -42,6 +42,7 @@ main {
 #game-map {
     width: 832px;
     height: 896px;
+    position: relative;
     background: #111;
 }
 #legend {
@@ -51,7 +52,7 @@ main {
 
 
 
-   
+
 
 .legend-list {
     padding: 0;

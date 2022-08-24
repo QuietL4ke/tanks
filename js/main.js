@@ -1,13 +1,18 @@
+import { MAP, MAP_LEGEND, DIMENSIONS } from "./map.js";
+import { Wall } from "./entities/Wall.js";
 
 var GAME_TIMER_INTERVAL = 1000; // задаёт интервал времени, за который будет выполняться один шаг в игре
 var PLAYER_LIFE_COUNT = 3;
 var ENEMY_TANKS_COUNT = 21;
+
 var IS_GAME_OVER = false;
 
 /**
  * в этой функции можно выполнить весь тот код, который необходим для старта игры
- * например, именно в этом месте можно нарисовать блоки стен на карте и подписаться на события нажатия кнопок управления 
+ * например, именно в этом месте можно нарисовать блоки стен на карте и подписаться на события нажатия кнопок управления
  */
+var walls = [];
+const gameMap = document.getElementById('game-map');
 gameInitialization();
 
 
@@ -19,8 +24,22 @@ gameInitialization();
 gameLoop();
 
 
+
 function gameInitialization() {
 
+    MAP.forEach((line, y) => {
+        line.forEach((item, x) => {
+            switch (item) {
+                case MAP_LEGEND.WALL:
+                    walls.push(new Wall( x * DIMENSIONS.CELL_WIDTH, y * DIMENSIONS.CELL_HEIGHT, gameMap));
+                break;
+            }
+        });
+    })
+
+    walls.forEach(wall => {
+        wall.draw(document.getElementById('game-map'))
+    })
 }
 
 function gameLoop() {
