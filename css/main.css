@@ -27,6 +27,12 @@ html {
     background-size: contain;
 }
 
+.game-object__bullet {
+    width: 7px;
+    height: 7px;
+    background-color: white;
+}
+
 
 main {
     width: 1100px;
@@ -44,6 +50,7 @@ main {
     height: 896px;
     position: relative;
     background: #111;
+    outline: none;
 }
 #legend {
     flex: 1 30%;
