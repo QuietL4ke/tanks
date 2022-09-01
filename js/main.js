@@ -3,6 +3,7 @@ import { Wall } from "./entities/Wall.js";
 import { PlayerTank } from "./entities/PlayerTank.js";
 import { EnemyTank } from "./entities/EnemyTank.js";
 import { PlayerTankController } from "./controller/PlayerTankController.js";
+import { ObjectOnMap } from "./entities/ObjectOnMap.js";
 
 const ONE_SECOND = 1000;
 const FPS = 60;
@@ -20,7 +21,7 @@ function copyMap(map) {
 }
 
 function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min) + min);
+    return Math.round(Math.random() * (max - min) + min);
 }
 
 class Game {
@@ -35,7 +36,8 @@ class Game {
         this.map = copyMap(map)
         this.gameMap = document.getElementById('game-map');
         this.enemyTanksCreated = 0;
-        this.canTanksRespawn = true;
+        this.isEnemyTankCreating = false;
+        this.enemyBases = [];
     }
 
     startGame() {
@@ -59,13 +61,12 @@ class Game {
                         this.enemyTanks.push(new EnemyTank(x * DIMENSIONS.CELL_WIDTH, y * DIMENSIONS.CELL_HEIGHT,
                             DIMENSIONS.CELL_WIDTH, DIMENSIONS.CELL_HEIGHT, this.gameMap, SPEED.TANK));
                         this.enemyTanksCreated += 1;
+                        this.enemyBases.push(new ObjectOnMap(x * DIMENSIONS.CELL_WIDTH, y * DIMENSIONS.CELL_HEIGHT,
+                            DIMENSIONS.CELL_WIDTH, DIMENSIONS.CELL_HEIGHT, this.gameMap))
                         break;
                 }
             });
         })
-        this.tanks = this.enemyTanks.slice()
-        this.tanks.push(this.playerTank)
-        this.drawEntities();
         this.playerController = new PlayerTankController(this.playerTank, this.gameMap,
             ['w', 'd', 's', 'a', ' ']);
     }
@@ -92,6 +93,8 @@ class Game {
     }
 
     gameStep() {
+        this.tanks = this.enemyTanks.slice()
+        this.tanks.push(this.playerTank)
         this.analyzeHits();
         this.moveEntities();
         this.handlePlayerTank();
@@ -106,10 +109,33 @@ class Game {
         this.walls = this.walls.filter(walls => !walls.isDestroyed())
     }
 
+    respawnEnemyTank() {
+        let canRespawn = true;
+        let baseNumber = getRandomInt(0, this.enemyBases.length - 1);
+        this.tanks.forEach(tank => {
+            if (this.isSecondInFirst(tank.getCorners(), this.enemyBases[baseNumber].getCorners()) ||
+                this.isSecondInFirst(this.enemyBases[baseNumber].getCorners(), tank.getCorners())) {
+                canRespawn = false;
+            }
+        });
+        if (canRespawn) {
+            let x = this.enemyBases[baseNumber].getX();
+            let y = this.enemyBases[baseNumber].getY();
+            this.enemyTanks.push(new EnemyTank(x, y,
+                DIMENSIONS.CELL_WIDTH, DIMENSIONS.CELL_HEIGHT, this.gameMap, SPEED.TANK));
+            this.enemyTanksCreated += 1;
+            this.isEnemyTankCreating = false;
+        } else {
+            setTimeout(this.respawnEnemyTank.bind(this), DELAY.RESPAWN);
+        }
+    }
+
+
     respawnEntities() {
-
-        if (this.enemyTanksCreated <= ENEMY_TANKS_COUNT && this.enemyTanks.length < ENEMY_TANKS_ON_MAP) {
-
+        if (this.enemyTanksCreated <= ENEMY_TANKS_COUNT && this.enemyTanks.length < ENEMY_TANKS_ON_MAP &&
+            !this.isEnemyTankCreating) {
+            this.isEnemyTankCreating = true;
+            setTimeout(this.respawnEnemyTank.bind(this), DELAY.RESPAWN);
         }
     }
 
@@ -226,7 +252,8 @@ class Game {
 
     isSecondInFirst(hitbox1, hitbox2) {
         let result = this.isInSquare(hitbox2[0], hitbox1) || this.isInSquare(hitbox2[1], hitbox1) ||
-            this.isInSquare(hitbox2[2], hitbox1) || this.isInSquare(hitbox2[3], hitbox1);
+            this.isInSquare(hitbox2[2], hitbox1) || this.isInSquare(hitbox2[3], hitbox1) ||
+            (hitbox1[0].x == hitbox2[0].x && hitbox1[0].y == hitbox2[0].y);
         if (!result) {
             const hitboxMiddle = []
             hitboxMiddle.push({ x: (hitbox2[0].x + hitbox2[1].x) / 2, y: hitbox2[0].y });
