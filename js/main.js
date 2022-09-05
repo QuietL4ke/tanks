@@ -36,7 +36,9 @@ class Game {
         this.map = copyMap(map)
         this.gameMap = document.getElementById('game-map');
         this.enemyTanksCreated = 0;
+        this.playerTanksCreated = 0;
         this.isEnemyTankCreating = false;
+        this.isPlayerTankCreating = false;
         this.enemyBases = [];
     }
 
@@ -54,6 +56,8 @@ class Game {
                             DIMENSIONS.CELL_WIDTH, DIMENSIONS.CELL_HEIGHT, this.gameMap));
                         break;
                     case MAP_LEGEND.PLAYER_BASE:
+                        this.playerBase = new ObjectOnMap(x * DIMENSIONS.CELL_WIDTH, y * DIMENSIONS.CELL_HEIGHT,
+                            DIMENSIONS.CELL_WIDTH, DIMENSIONS.CELL_HEIGHT, this.gameMap);
                         this.playerTank = new PlayerTank(x * DIMENSIONS.CELL_WIDTH, y * DIMENSIONS.CELL_HEIGHT,
                             DIMENSIONS.CELL_WIDTH, DIMENSIONS.CELL_HEIGHT, this.gameMap, SPEED.TANK)
                         break;
@@ -87,9 +91,24 @@ class Game {
     gameLoop() {
         if (this.isGameOver !== true) {
             this.gameStep();
-            this.drawEntities()
+            this.drawEntities();
+            this.updateGameInfo();
+            this.checkGameEnd();
             setTimeout(this.gameLoop.bind(this), ONE_FRAME_TIME);
         }
+    }
+
+    checkGameEnd() {
+        if((ENEMY_TANKS_COUNT == this.enemyTanksCreated && this.enemyTanks.length == 0) ||
+            (this.playerTanksCreated == PLAYER_LIFE_COUNT && this.playerTank.destroyed())) {
+                this.isGameOver = true;
+                alert('Game end');
+            }
+    }
+
+    updateGameInfo() {
+        document.getElementById("enemy-lives").innerHTML = ENEMY_TANKS_COUNT - this.enemyTanksCreated;
+        document.getElementById("player-lives").innerHTML = PLAYER_LIFE_COUNT - this.playerTanksCreated;
     }
 
     gameStep() {
@@ -131,11 +150,37 @@ class Game {
     }
 
 
+    respawnPlayer() {
+        let canRespawn = true;
+        this.tanks.forEach(tank => {
+            if (this.isSecondInFirst(tank.getCorners(), this.playerBase.getCorners()) ||
+                this.isSecondInFirst(this.playerBase.getCorners(), tank.getCorners())) {
+                canRespawn = false;
+            }
+        });
+        if (canRespawn) {
+            let x = this.playerBase.getX();
+            let y = this.playerBase.getY();
+            this.playerTank = new PlayerTank(x, y,
+                DIMENSIONS.CELL_WIDTH, DIMENSIONS.CELL_HEIGHT, this.gameMap, SPEED.TANK);
+            this.playerTanksCreated += 1;
+            this.playerController.setTank(this.playerTank);
+            this.isPlayerTankCreating = false;
+        } else {
+            setTimeout(this.respawnPlayer.bind(this), DELAY.RESPAWN);
+        }
+    }
+
     respawnEntities() {
-        if (this.enemyTanksCreated <= ENEMY_TANKS_COUNT && this.enemyTanks.length < ENEMY_TANKS_ON_MAP &&
+        if (this.enemyTanksCreated < ENEMY_TANKS_COUNT && this.enemyTanks.length < ENEMY_TANKS_ON_MAP &&
             !this.isEnemyTankCreating) {
             this.isEnemyTankCreating = true;
             setTimeout(this.respawnEnemyTank.bind(this), DELAY.RESPAWN);
+        }
+        if (!this.isPlayerTankCreating &&
+             this.playerTank.isDestroyed() && this.playerTanksCreated < PLAYER_LIFE_COUNT) {
+            this.isPlayerTankCreating = true;
+            setTimeout(this.respawnPlayer.bind(this), DELAY.RESPAWN);
         }
     }
 
